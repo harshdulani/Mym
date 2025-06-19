@@ -17,7 +17,7 @@ class MYM_API AMymPlayerController : public APlayerController
 	GENERATED_BODY()
 	
 protected:
-	virtual void OnPossess(APawn* InPawn) override;
+	virtual void AcknowledgePossession(class APawn* P) override;
 
 public:
 	UFUNCTION(BlueprintPure, Category = "HUD")
@@ -27,8 +27,10 @@ public:
 	FORCEINLINE TWeakObjectPtr<AMymCharacter> GetMymCharacter() const { return MymCharacter; }
 
 private:
-	UPROPERTY(BlueprintReadOnly, Category = "HUD", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(BlueprintReadWrite, Category = "HUD", meta = (AllowPrivateAccess = "true"))
 	AMymHUD* MymHUD;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<AMymHUD> MymHUDClassRef;
 	
 	TWeakObjectPtr<AMymCharacter> MymCharacter;
 };

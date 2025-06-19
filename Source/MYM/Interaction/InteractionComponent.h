@@ -9,6 +9,7 @@
 class UInteractionTrackerComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FInteractionDelegate, UInteractionTrackerComponent*, ByTracker);
+DECLARE_LOG_CATEGORY_CLASS(LogInteraction, Warning, Log);
 
 UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MYM_API UInteractionComponent : public USphereComponent
@@ -17,7 +18,10 @@ class MYM_API UInteractionComponent : public USphereComponent
 
 public:	
 	UInteractionComponent();
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
+	bool OwnsPrimitive(UPrimitiveComponent* Primitive) const;
+	
 protected:
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void EnterRange(UPrimitiveComponent* OverlappedComponent,
@@ -69,18 +73,24 @@ private:
 	
 	
 public:	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|State")
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Interaction|State")
 	FGameplayTag CurrentState;
+	UPROPERTY(Replicated)
 	bool bManageRange = true;
+	
+	// All the primitive components (static meshes, etc) that must be traced, when this interactable wants to be hit.
+	// Warning: Unexpected behavior if same primitive is in this list for multiple InteractionComponents in an actor.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
+	TArray<TObjectPtr<UPrimitiveComponent>> OwnedPrimitives;
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction", meta = (AllowPrivateAccess = "true"))
 	FString InteractionString;
 
-	// for state mgmt	
-	// State cycle order (for GetNextState functionality)
+	// for state mgmt
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|State", meta = (AllowPrivateAccess = "true"))
-	bool bAllowsAllowed = false;
+	bool bAllowsAllowed = true;
+	// State cycle order (for GetNextState functionality)
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|State", meta = (AllowPrivateAccess = "true"))
 	TArray<FGameplayTag> StateCycleOrder;
 
@@ -93,4 +103,5 @@ protected:
 	// these are universal default tags, but assignable via the details panel in case some interactable needs it 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|State|Default State Tags", meta = (AllowPrivateAccess = "true"))
 	FGameplayTag StateDisabled = FGameplayTag::RequestGameplayTag(FName("Interaction.State.Disabled"));
+	
 };

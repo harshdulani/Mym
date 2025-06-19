@@ -1,6 +1,9 @@
 #include "InteractionComponent.h"
 #include "InteractionTrackerComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "MYM/Core/MymCharacter.h"
+#include "MYM/Core/MymPlayerController.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
 UInteractionComponent::UInteractionComponent()
@@ -12,6 +15,18 @@ UInteractionComponent::UInteractionComponent()
 	SphereRadius = 256.f;
 }
 
+void UInteractionComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(UInteractionComponent, CurrentState);
+	DOREPLIFETIME(UInteractionComponent, bManageRange);
+}
+
+bool UInteractionComponent::OwnsPrimitive(UPrimitiveComponent* Primitive) const
+{
+	return OwnedPrimitives.Contains(Primitive);
+}
+
 // Called when the game starts
 void UInteractionComponent::BeginPlay()
 {
@@ -20,6 +35,18 @@ void UInteractionComponent::BeginPlay()
 	bManageRange = true;
 	OnComponentBeginOverlap.AddDynamic(this, &UInteractionComponent::EnterRange);
 	OnComponentEndOverlap.AddDynamic(this, &UInteractionComponent::ExitRange);
+
+#if WITH_EDITOR
+	if (OwnedPrimitives.Num() == 0)
+	{
+		TArray<UInteractionComponent*> Components;
+		GetOwner()->GetComponents<UInteractionComponent>(Components);
+		if (Components.Num() > 1)
+		{
+			UE_LOG(LogInteraction, Error, TEXT("Interaction Component does not have owned primitives assigned. This will cause unexpected behaviour because you have multiple interactables in this actor"));
+		}
+	}
+#endif
 }
 
 void UInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -38,13 +65,6 @@ void UInteractionComponent::BeginInteraction(UInteractionTrackerComponent* Track
 	
 	if (OnInteractBegin.IsBound())
 		OnInteractBegin.Broadcast(Tracker);
-
-	/*
-	if (!CycleToNextState())
-	{
-		Tracker->InteractableDisabled(this);
-	}
-	*/
 }
 
 void UInteractionComponent::EndInteraction(UInteractionTrackerComponent* Tracker)
@@ -98,6 +118,11 @@ void UInteractionComponent::EnterRange(UPrimitiveComponent* OverlappedComponent,
 {
 	if (AMymCharacter* PlayerChar = Cast<AMymCharacter>(OtherActor))
 	{
+		if (!PlayerChar->IsLocallyControlled())
+		{
+			return;
+		}
+		
 		PlayerChar->GetInteractionTracker()->InteractableEnterRange(this);
 	}
 }
@@ -109,6 +134,11 @@ void UInteractionComponent::ExitRange(UPrimitiveComponent* OverlappedComponent,
 {
 	if (AMymCharacter* PlayerChar = Cast<AMymCharacter>(OtherActor))
 	{
+		if (!PlayerChar->IsLocallyControlled())
+		{
+			return;
+		}
+
 		PlayerChar->GetInteractionTracker()->InteractableExitRange(this);
 		if (!bManageRange)
 		{

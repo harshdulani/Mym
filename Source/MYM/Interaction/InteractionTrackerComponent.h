@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "InteractionTrackerComponent.generated.h"
 
+class UGrabInteractionComponent;
 class AMymCharacter;
 class AMymHUD;
 class UInteractionComponent;
@@ -18,13 +19,10 @@ class MYM_API UInteractionTrackerComponent : public UActorComponent
 public:	
 	// Sets default values for this component's properties
 	UInteractionTrackerComponent();
-	
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
 	
 public:	
-	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
@@ -48,6 +46,10 @@ public:
 	void SetCharacterReference(AMymCharacter* Character) { MymCharacter = Character; }
 	AMymCharacter* GetCharacter() const { return MymCharacter; }
 	void InteractableDisabled(UInteractionComponent* Interactable);
+	UFUNCTION(BlueprintCallable, Category = "Interaction|Grab")
+	void SetGrabbable(UGrabInteractionComponent* Grabbable);
+	UFUNCTION(BlueprintPure, Category = "Interaction|Grab")
+	UGrabInteractionComponent* GetGrabbable() const { return CurrentGrabbable.Get(); }
 
 protected:
 	void TraceForInteractables();
@@ -56,18 +58,24 @@ protected:
 	void UnsetCurrentInteractable();
 	
 private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Interaction, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction|Refs", meta = (AllowPrivateAccess = "true"))
 	TArray<UInteractionComponent*> InteractablesInRange;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Interaction, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category = Interaction, meta = (AllowPrivateAccess = "true"))
 	UInteractionComponent* CurrentInteractable = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction|Refs", meta = (AllowPrivateAccess = "true"))
+	AMymHUD* MymHUD = nullptr;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction|Refs", meta = (AllowPrivateAccess = "true"))
+	AMymCharacter* MymCharacter = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Interaction, meta = (AllowPrivateAccess = "true"))
 	float InteractionTraceRange = 256.f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Interaction, meta = (AllowPrivateAccess = "true"))
-	AMymHUD* MymHUD = nullptr;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Interaction, meta = (AllowPrivateAccess = "true"))
-	AMymCharacter* MymCharacter = nullptr;
+	UPROPERTY(Replicated)
+	TObjectPtr<UGrabInteractionComponent> CurrentGrabbable;
+
+	UPROPERTY(Replicated)
+	bool bInteractionHeld = false;
 };

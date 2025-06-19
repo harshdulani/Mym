@@ -16,14 +16,17 @@ class MYM_API UGrabInteractionComponent : public UInteractionComponent
 
 public:
 	UGrabInteractionComponent();
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	UFUNCTION(BlueprintCallable, Category="Grab")
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Grab")
 	void StartGrabbing(UInteractionTrackerComponent* ByTracker);
-	UFUNCTION(BlueprintCallable, Category="Grab")
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Grab")
+	void TickGrabbing();
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category="Grab")
 	void StopGrabbing(UInteractionTrackerComponent* ByTracker);
 
 	UFUNCTION(BlueprintPure, Category="Grab")
@@ -34,6 +37,7 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category="Grab")
 	UInteractionTrackerComponent* GetGrabber() const { return Grabber.Get(); }
-	
+
+private:
 	TWeakObjectPtr<UInteractionTrackerComponent> Grabber;
 };

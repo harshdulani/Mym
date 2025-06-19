@@ -2,9 +2,8 @@
 #include "GrabInteractionComponent.h"
 #include "InteractionTrackerComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "MYM/Core/MymCharacter.h"
-#include "MYM/Core/MymHUD.h"
-#include "MYM/Core/MymPlayerController.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 
 UGrabInteractionComponent::UGrabInteractionComponent()
@@ -12,6 +11,11 @@ UGrabInteractionComponent::UGrabInteractionComponent()
 	InteractionString = "Grab";
 
 	PrimaryComponentTick.bCanEverTick = true;
+}
+
+void UGrabInteractionComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 }
 
 void UGrabInteractionComponent::BeginPlay()
@@ -33,7 +37,36 @@ void UGrabInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 void UGrabInteractionComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	
+	if (GetOwner()->HasAuthority())
+		TickGrabbing();
+}
 
+void UGrabInteractionComponent::StartGrabbing_Implementation(UInteractionTrackerComponent* ByTracker)
+{
+	if (Grabber.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("GrabbingActor already set!"));
+		return;
+	}
+	Grabber = ByTracker;
+	Grabber->SetGrabbable(this);
+	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Grabbing started %s %s"), *ByTracker->GetName(), *Grabber->GetName()));
+	GetOwner()->SetOwner(ByTracker->GetCharacter());
+	UPrimitiveComponent* GrabComponent = Cast<UPrimitiveComponent>(GetAttachmentRoot());
+	if (!GrabComponent)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Grab Unsuccessful: Root component doesn't derive from PrimitiveComponent"));
+		return;
+	}
+	Grabber->GetCharacter()->GetGrabHandle()->GrabComponentAtLocation(GrabComponent, FName("None"), GrabComponent->GetComponentLocation());
+	SetComponentTickEnabled(true);
+
+	Grabber->PauseInteractionTesting();
+}
+
+void UGrabInteractionComponent::TickGrabbing_Implementation()
+{
 	if (!Grabber.IsValid())
 	{
 		return;
@@ -45,36 +78,19 @@ void UGrabInteractionComponent::TickComponent(float DeltaTime, enum ELevelTick T
 	Grabber->GetCharacter()->GetGrabHandle()->SetTargetLocationAndRotation(Location, Rotation);
 }
 
-void UGrabInteractionComponent::StartGrabbing(UInteractionTrackerComponent* ByTracker)
+void UGrabInteractionComponent::StopGrabbing_Implementation(UInteractionTrackerComponent* ByTracker)
 {
-	if (Grabber.IsValid())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("GrabbingActor already set!"));
-		return;
-	}
-	Grabber = ByTracker;
-	UPrimitiveComponent* GrabComponent = Cast<UPrimitiveComponent>(GetAttachmentRoot());
-	if (!GrabComponent)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Root component doesn't derive from PrimitiveComponent"));
-		return;
-	}
-	Grabber->GetCharacter()->GetGrabHandle()->GrabComponentAtLocation(GrabComponent, FName("None"), GrabComponent->GetComponentLocation());
-	SetComponentTickEnabled(true);
-
-	ByTracker->PauseInteractionTesting();
-}
-
-void UGrabInteractionComponent::StopGrabbing(UInteractionTrackerComponent* ByTracker)
-{
-	if (!Grabber.IsValid() || ByTracker != Grabber.Get())
+	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Grabbing stopped %s %s"), *ByTracker->GetName(), (Grabber.IsValid() ? *Grabber->GetName() : TEXT("None"))));
+	if (Grabber.IsValid() && ByTracker != Grabber.Get())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("GrabbingActor not set/ doesn't match tracker!"));
 		return;
 	}
-	Grabber->GetCharacter()->GetGrabHandle()->ReleaseComponent();
+	ByTracker->GetCharacter()->GetGrabHandle()->ReleaseComponent();
+	ByTracker->SetGrabbable(nullptr);
 	
 	ByTracker->ResumeInteractionTesting();
+	
 	SetComponentTickEnabled(false);
 	Grabber.Reset();
 }
@@ -89,5 +105,5 @@ void UGrabInteractionComponent::GetGrabLocationAndRotation(FVector& OutLocation,
 	AMymCharacter* MymCharacter = Grabber->GetCharacter();
 	
 	OutRotation = MymCharacter->GetActorRotation();
-	OutLocation = MymCharacter->GetActorLocation() + (MymCharacter->GetFirstPersonCameraComponent()->GetForwardVector() * GrabDistance);
+	OutLocation = MymCharacter->GetActorLocation() + (MymCharacter->GetCameraForward() * GrabDistance);
 }

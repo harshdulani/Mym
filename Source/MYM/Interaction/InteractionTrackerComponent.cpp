@@ -1,8 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "InteractionTrackerComponent.h"
+#include "GrabInteractionComponent.h"
 #include "InteractionComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "MYM/Core/MymHUD.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
 UInteractionTrackerComponent::UInteractionTrackerComponent()
@@ -11,25 +13,27 @@ UInteractionTrackerComponent::UInteractionTrackerComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	// ...
+	// Set inactive right now, PlayerController sets it active on possession,
+	// as we dont need to track interations on remotely controlled characters
+	UActorComponent::SetActive(false);
 }
 
-
-// Called when the game starts
-void UInteractionTrackerComponent::BeginPlay()
+void UInteractionTrackerComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::BeginPlay();
-
-	// ...
-	
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(UInteractionTrackerComponent, CurrentGrabbable);
+	DOREPLIFETIME(UInteractionTrackerComponent, bInteractionHeld);
+	DOREPLIFETIME(UInteractionTrackerComponent, CurrentInteractable);
 }
-
 
 // Called every frame
 void UInteractionTrackerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	// let the interaction subclasses define what their tick is. had i been making an OnInteractionHeld event, I wouldve used it. but right now adding a delegate broadcast seems unnecessary
+	if (bInteractionHeld) return;
+	
 	if (InteractablesInRange.Num() > 0)
 		TraceForInteractables();
 }
@@ -39,25 +43,31 @@ void UInteractionTrackerComponent::InteractBegin()
 	if (!CurrentInteractable) return;
 
 	CurrentInteractable->BeginInteraction(this);
+	bInteractionHeld = true;
 }
 
 void UInteractionTrackerComponent::InteractEnd()
 {
-	if (!CurrentInteractable) return;
-
-	CurrentInteractable->EndInteraction(this);
+	bInteractionHeld = false;
+	if (CurrentInteractable)
+	{
+		CurrentInteractable->EndInteraction(this);
+	}
 }
 
 void UInteractionTrackerComponent::PauseInteractionTesting()
 {
-	MymHUD->HideCrosshair();
+	if (MymHUD)
+		MymHUD->HideCrosshair();
 	SetComponentTickEnabled(false);
 }
 
 void UInteractionTrackerComponent::ResumeInteractionTesting()
 {
-	if (!InteractablesInRange.IsEmpty() && CurrentInteractable)
+	if (!InteractablesInRange.IsEmpty() && MymHUD && CurrentInteractable)
+	{
 		MymHUD->ShowInteractionWidget(CurrentInteractable->GetInteractionString());
+	}
 	
 	SetComponentTickEnabled(true);
 }
@@ -71,17 +81,22 @@ void UInteractionTrackerComponent::InteractableDisabled(UInteractionComponent* I
 	}
 	if (InteractablesInRange[idx] == CurrentInteractable)
 	{
+		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("DisabledInform: UnsetCurrentInteractable from %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 		UnsetCurrentInteractable();
 	}
 			
 	InteractablesInRange.RemoveAtSwap(idx);
 }
 
+void UInteractionTrackerComponent::SetGrabbable(UGrabInteractionComponent* Grabbable)
+{
+	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Set Grabbable: %s"), (Grabbable ? *Grabbable->GetName() : TEXT("None"))));
+	CurrentGrabbable = Grabbable;
+	UnsetCurrentInteractable();
+}
+
 void UInteractionTrackerComponent::TraceForInteractables()
 {
-	// make sure no interactable has become disabled
-	//CheckForDisabledInteractables();
-	
 	//Get Screen Size
 	FVector2D ViewportSize;
 	if (GEngine && GEngine->GameViewport)
@@ -106,17 +121,44 @@ void UInteractionTrackerComponent::TraceForInteractables()
 											 ECC_Visibility))
 		{
 			// Make sure the Visibility channel for at least one Component (usually Static Mesh) for the interactable is set to true in the editor
-			if (UInteractionComponent* InteractionComp = ScreenTraceResult.GetActor()->FindComponentByClass<UInteractionComponent>())
+			TArray<UInteractionComponent*> InteractablesInActor;
+			ScreenTraceResult.GetActor()->GetComponents<UInteractionComponent>(InteractablesInActor);
+			
+			// If actor has only one InteractionComponent, just go ahead with that instance
+			if (InteractablesInActor.Num() == 1)
 			{
-				if ((!CurrentInteractable || (CurrentInteractable && CurrentInteractable != InteractionComp)))
+				if (UInteractionComponent* InteractionComp = InteractablesInActor[0])
 				{
-					MymHUD->ShowInteractionWidget(InteractionComp->GetInteractionString());
+					if ((!CurrentInteractable || (CurrentInteractable && CurrentInteractable != InteractionComp)) && MymHUD)
+					{
+						MymHUD->ShowInteractionWidget(InteractionComp->GetInteractionString());
+					}
+					CurrentInteractable = InteractionComp;
+					return;
 				}
-				CurrentInteractable = InteractionComp;
-				return;
+			}
+			else if (InteractablesInActor.Num() > 1) // If actor has multiple InteractionComponents, check for which one owns this mesh
+			{
+				for (const auto& Interactable : InteractablesInActor)
+				{
+					if (Interactable->OwnsPrimitive(ScreenTraceResult.Component.Get()))
+					{
+						if ((!CurrentInteractable || (CurrentInteractable && CurrentInteractable != Interactable)) && MymHUD)
+						{
+							MymHUD->ShowInteractionWidget(Interactable->GetInteractionString());
+						}
+						CurrentInteractable = Interactable;
+						return;
+					}
+				}
 			}
 		}
 	}
+	FString InteractionString = TEXT("None");
+	if (CurrentInteractable)
+		InteractionString = CurrentInteractable->GetName();
+	
+	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("No tracehit: UnsetCurrentInteractable from %s %i"), *InteractionString, bInteractionHeld));
 	UnsetCurrentInteractable();
 }
 
@@ -130,19 +172,27 @@ void UInteractionTrackerComponent::CheckForDisabledInteractables()
 		{
 			if (InteractablesInRange[i] == CurrentInteractable)
 			{
-				UnsetCurrentInteractable();
+				UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("DisabledCheck: UnsetCurrentInteractable from %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
+				if (CurrentGrabbable == CurrentInteractable)
+				{
+					SetGrabbable(nullptr);
+				}
+				else
+				{
+					UnsetCurrentInteractable();
+				}
 			}
 			
 			InteractablesInRange.RemoveAtSwap(i);
-			continue;
 		}
 	}
 }
 
 void UInteractionTrackerComponent::UnsetCurrentInteractable()
-{
+{	
 	CurrentInteractable = nullptr;
-	MymHUD->HideInteractionWidget();
+	if (MymHUD)
+		MymHUD->HideInteractionWidget();
 }
 
 void UInteractionTrackerComponent::InteractableEnterRange_Implementation(UInteractionComponent* Interactable)
@@ -166,7 +216,10 @@ void UInteractionTrackerComponent::InteractableEnterRange_Implementation(UIntera
 	InteractablesInRange.Add(Interactable);
 
 	if (InteractablesInRange.Num() >= 1)
-		MymHUD->ShowCrosshair();
+	{
+		if (MymHUD)
+			MymHUD->ShowCrosshair();
+	}
 }
 
 void UInteractionTrackerComponent::InteractableExitRange_Implementation(UInteractionComponent* Interactable)
@@ -191,10 +244,17 @@ void UInteractionTrackerComponent::InteractableExitRange_Implementation(UInterac
 
 	if (InteractablesInRange.IsEmpty())
 	{
-		MymHUD->HideCrosshair();
+		if (MymHUD)
+			MymHUD->HideCrosshair();
 	}
-	if (InteractablesInRange.IsEmpty() || CurrentInteractable == Interactable)
+	if ((InteractablesInRange.IsEmpty() || CurrentInteractable == Interactable)
+		&& (CurrentGrabbable != Interactable)) // grabbables will be a certain distance off which might be out of their overlap range
 	{
+		FString GrabStr = TEXT("None");
+		if (CurrentGrabbable)
+			GrabStr = CurrentGrabbable->GetName();
+		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("exit range: UnsetCurrentInteractable from %s, grab %s eq %i"),
+		(CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None")), *GrabStr, CurrentGrabbable == CurrentInteractable));~c 
 		UnsetCurrentInteractable();
 	}
 }

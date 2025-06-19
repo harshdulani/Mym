@@ -6,6 +6,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "ShopState.generated.h"
 
+class AMymPlayerController;
 // Expose events to blueprint/UI
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBudgetChanged, int32, NewBudget);
 
@@ -16,25 +17,32 @@ class MYM_API AShopState : public AGameStateBase
 
 public:
 	AShopState();
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Shop|Budget")
 	int32 GetShopBudget() const { return ShopBudget; }
 
 	/** Attempts to make a purchase (server side only) */
 	UFUNCTION(BlueprintCallable, Category = "Shop|Budget")
-	bool TryPurchase(int32 Cost);
-
+	void TryPurchase(AMymPlayerController* InstigatingPC, int32 Cost, TSubclassOf<AActor> SpawnBPClass, const FTransform& Location);
+	
+	UFUNCTION(Server, Reliable, Category = "Shop|Budget")
+	void TryPurchase_Auth(AMymPlayerController* InstigatingPC, int32 Cost, TSubclassOf<AActor> SpawnBPClass, const FTransform& Location);
+	
+	UFUNCTION(NetMulticast, Reliable, Category = "Shop|Budget")
+	void OnPurchase_Client(int32 NewBudget);
+	
 protected:
-	UPROPERTY(ReplicatedUsing = OnRep_ShopBudget)
+	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ShopBudget)
 	int32 ShopBudget = 0;
 
 	UFUNCTION()
 	void OnRep_ShopBudget();
 
 public:
-	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	UPROPERTY(BlueprintAssignable, Category = "Shop")
-	FOnBudgetChanged OnBudgetChanged;
+	FOnBudgetChanged OnBudgetUpdated;
 	
 };

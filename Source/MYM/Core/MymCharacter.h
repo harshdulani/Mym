@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ShopperComponent.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "MymCharacter.generated.h"
@@ -41,6 +42,9 @@ protected:
 	// APawn interface
 	virtual void NotifyControllerChanged() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
+
+	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	// End of APawn interface
 
 public:
@@ -56,6 +60,8 @@ public:
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
+	FVector GetCameraForward() const;
 
 public:
 	TWeakObjectPtr<AMymPlayerController> MymPC;
@@ -95,5 +101,10 @@ private:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Grab", meta = (AllowPrivateAccess = "true"))
 	UPhysicsHandleComponent* GrabHandle = nullptr;
-};
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shop", meta = (AllowPrivateAccess = "true"))
+	UShopperComponent* Shopper = nullptr;
+	
+	UPROPERTY(Replicated)
+	FVector CameraForward;
+};
