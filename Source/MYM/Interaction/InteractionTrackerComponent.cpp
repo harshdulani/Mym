@@ -31,7 +31,7 @@ void UInteractionTrackerComponent::TickComponent(float DeltaTime, ELevelTick Tic
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// let the interaction subclasses define what their tick is. had i been making an OnInteractionHeld event, I wouldve used it. but right now adding a delegate broadcast seems unnecessary
+	// let the interaction subclasses define what their tick is. had i been making an OnInteractionHeld event, I wouldve used it. but right now adding a delegate broadcast on tick() seems unnecessary
 	if (bInteractionHeld) return;
 	
 	if (InteractablesInRange.Num() > 0)
@@ -40,6 +40,7 @@ void UInteractionTrackerComponent::TickComponent(float DeltaTime, ELevelTick Tic
 
 void UInteractionTrackerComponent::InteractBegin()
 {
+	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("InteractBegin: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 	if (!CurrentInteractable) return;
 
 	CurrentInteractable->BeginInteraction(this);
@@ -47,11 +48,17 @@ void UInteractionTrackerComponent::InteractBegin()
 }
 
 void UInteractionTrackerComponent::InteractEnd()
-{
+{	
+	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("InteractEnd: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 	bInteractionHeld = false;
+	// @todo: if current grabbable is bad code, we can do better
 	if (CurrentInteractable)
 	{
 		CurrentInteractable->EndInteraction(this);
+	}
+	else if (CurrentGrabbable)
+	{
+		CurrentGrabbable->EndInteraction(this);
 	}
 }
 
@@ -254,7 +261,7 @@ void UInteractionTrackerComponent::InteractableExitRange_Implementation(UInterac
 		if (CurrentGrabbable)
 			GrabStr = CurrentGrabbable->GetName();
 		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("exit range: UnsetCurrentInteractable from %s, grab %s eq %i"),
-		(CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None")), *GrabStr, CurrentGrabbable == CurrentInteractable));~c 
+		(CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None")), *GrabStr, CurrentGrabbable == CurrentInteractable)); 
 		UnsetCurrentInteractable();
 	}
 }

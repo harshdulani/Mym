@@ -3,6 +3,7 @@
 
 #include "MymPlayerController.h"
 #include "ShopState.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 // Sets default values for this component's properties
 UShopperComponent::UShopperComponent()
@@ -33,6 +34,8 @@ AShopState* UShopperComponent::UpdateGetShopState()
 
 void UShopperComponent::TryPurchase_Auth_Implementation(AMymPlayerController* InstigatingPC, int32 Cost, TSubclassOf<AActor> SpawnBPClass, const FTransform& Location)
 {
+	UKismetSystemLibrary::PrintString(this,
+		FString::Printf(TEXT("TryPurchase_Auth %s"), *UpdateGetShopState()->GetName()));
 	if (UpdateGetShopState())
 		UpdateGetShopState()->TryPurchase(InstigatingPC, Cost, SpawnBPClass, Location);
 }

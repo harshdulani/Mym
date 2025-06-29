@@ -30,7 +30,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void InteractEnd();
 
-	
 	// don't trace for interactables WHILE interacting with one, helps in cases like grab and move
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void PauseInteractionTesting();

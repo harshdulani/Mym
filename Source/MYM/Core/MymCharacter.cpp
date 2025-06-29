@@ -140,12 +140,12 @@ void AMymCharacter::Look(const FInputActionValue& Value)
 
 void AMymCharacter::InteractBegin(const FInputActionValue& Value)
 {
-	if (GetNetMode() == NM_Client)
+	if (IsLocallyControlled())
 		InteractionTracker->InteractBegin();
 }
 
 void AMymCharacter::InteractEnd(const FInputActionValue& Value)
 {
-	if (GetNetMode() == NM_Client)
-	InteractionTracker->InteractEnd();
+	if (IsLocallyControlled())
+		InteractionTracker->InteractEnd();
 }
