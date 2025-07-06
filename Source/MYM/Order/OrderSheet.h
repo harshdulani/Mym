@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "OrderSheet.generated.h"
 
+class AShopState;
 class UOrderDataAsset;
 class UTextRenderComponent;
 class UGrabInteractionComponent;
@@ -26,10 +27,6 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-public:
 	UFUNCTION(BlueprintCallable, Category = "Order")
 	void InitOrder(const FOrderData& OrderData) const;
 
@@ -54,5 +51,4 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = true))
 	TObjectPtr<UStaticMeshComponent> PaperMesh;
-
 };

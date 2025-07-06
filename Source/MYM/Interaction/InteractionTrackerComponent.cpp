@@ -40,7 +40,7 @@ void UInteractionTrackerComponent::TickComponent(float DeltaTime, ELevelTick Tic
 
 void UInteractionTrackerComponent::InteractBegin()
 {
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("InteractBegin: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
+	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("InteractBegin: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 	if (!CurrentInteractable) return;
 
 	CurrentInteractable->BeginInteraction(this);
@@ -49,7 +49,7 @@ void UInteractionTrackerComponent::InteractBegin()
 
 void UInteractionTrackerComponent::InteractEnd()
 {	
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("InteractEnd: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
+	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("InteractEnd: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 	bInteractionHeld = false;
 	// @todo: if current grabbable is bad code, we can do better
 	if (CurrentInteractable)
@@ -88,7 +88,7 @@ void UInteractionTrackerComponent::InteractableDisabled(UInteractionComponent* I
 	}
 	if (InteractablesInRange[idx] == CurrentInteractable)
 	{
-		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("DisabledInform: UnsetCurrentInteractable from %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
+		//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("DisabledInform: UnsetCurrentInteractable from %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 		UnsetCurrentInteractable();
 	}
 			
@@ -97,7 +97,7 @@ void UInteractionTrackerComponent::InteractableDisabled(UInteractionComponent* I
 
 void UInteractionTrackerComponent::SetGrabbable(UGrabInteractionComponent* Grabbable)
 {
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Set Grabbable: %s"), (Grabbable ? *Grabbable->GetName() : TEXT("None"))));
+	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Set Grabbable: %s"), (Grabbable ? *Grabbable->GetName() : TEXT("None"))));
 	CurrentGrabbable = Grabbable;
 	UnsetCurrentInteractable();
 }
@@ -165,7 +165,7 @@ void UInteractionTrackerComponent::TraceForInteractables()
 	if (CurrentInteractable)
 		InteractionString = CurrentInteractable->GetName();
 	
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("No tracehit: UnsetCurrentInteractable from %s %i"), *InteractionString, bInteractionHeld));
+	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("No tracehit: UnsetCurrentInteractable from %s %i"), *InteractionString, bInteractionHeld));
 	UnsetCurrentInteractable();
 }
 
@@ -260,8 +260,8 @@ void UInteractionTrackerComponent::InteractableExitRange_Implementation(UInterac
 		FString GrabStr = TEXT("None");
 		if (CurrentGrabbable)
 			GrabStr = CurrentGrabbable->GetName();
-		UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("exit range: UnsetCurrentInteractable from %s, grab %s eq %i"),
-		(CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None")), *GrabStr, CurrentGrabbable == CurrentInteractable)); 
+		// UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("exit range: UnsetCurrentInteractable from %s, grab %s eq %i"),
+			//(CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None")), *GrabStr, CurrentGrabbable == CurrentInteractable)); 
 		UnsetCurrentInteractable();
 	}
 }

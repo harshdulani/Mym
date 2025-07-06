@@ -52,24 +52,3 @@ AMachine::AMachine()
 	TextDone->SetupAttachment(ButtonSocketDone);
 }
 
-// Called when the game starts or when spawned
-void AMachine::BeginPlay()
-{
-	Super::BeginPlay();
-
-	Interaction1->OnInteractBegin.AddDynamic(this, &AMachine::OnInteract1Begin_Event);
-	Interaction2->OnInteractBegin.AddDynamic(this, &AMachine::OnInteract2Begin_Event);
-	Interaction3->OnInteractBegin.AddDynamic(this, &AMachine::OnInteract3Begin_Event);
-	InteractionDone->OnInteractBegin.AddDynamic(this, &AMachine::OnInteractDoneBegin_Event);
-}
-
-void AMachine::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-	
-	Interaction1->OnInteractBegin.RemoveDynamic(this, &AMachine::OnInteract1Begin_Event);
-	Interaction2->OnInteractBegin.RemoveDynamic(this, &AMachine::OnInteract2Begin_Event);
-	Interaction3->OnInteractBegin.RemoveDynamic(this, &AMachine::OnInteract3Begin_Event);
-	InteractionDone->OnInteractBegin.RemoveDynamic(this, &AMachine::OnInteractDoneBegin_Event);
-}
-

@@ -51,8 +51,8 @@ void UGrabInteractionComponent::StartGrabbing_Implementation(UInteractionTracker
 	}
 	Grabber = ByTracker;
 	Grabber->SetGrabbable(this);
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Grabbing started %s %s"), *ByTracker->GetName(), *Grabber->GetName()));
 	GetOwner()->SetOwner(ByTracker->GetCharacter());
+	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Grabbing started %s %s"), *ByTracker->GetName(), *Grabber->GetName()));
 	UPrimitiveComponent* GrabComponent = Cast<UPrimitiveComponent>(GetAttachmentRoot());
 	if (!GrabComponent)
 	{
@@ -80,7 +80,8 @@ void UGrabInteractionComponent::TickGrabbing_Implementation()
 
 void UGrabInteractionComponent::StopGrabbing_Implementation(UInteractionTrackerComponent* ByTracker)
 {
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Grabbing stopped %s %s"), *ByTracker->GetName(), (Grabber.IsValid() ? *Grabber->GetName() : TEXT("None"))));
+	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Grabbing stopped %s %s"),
+															*ByTracker->GetName(), (Grabber.IsValid() ? *Grabber->GetName() : TEXT("None"))));
 	if (Grabber.IsValid() && ByTracker != Grabber.Get())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("GrabbingActor not set/ doesn't match tracker!"));

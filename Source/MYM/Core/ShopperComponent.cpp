@@ -32,11 +32,15 @@ AShopState* UShopperComponent::UpdateGetShopState()
 	return ShopState.Get();
 }
 
-void UShopperComponent::TryPurchase_Auth_Implementation(AMymPlayerController* InstigatingPC, int32 Cost, TSubclassOf<AActor> SpawnBPClass, const FTransform& Location)
+void UShopperComponent::TryPurchaseWood_Auth_Implementation(AMymPlayerController* InstigatingPC, const FTransform& Location)
 {
-	UKismetSystemLibrary::PrintString(this,
-		FString::Printf(TEXT("TryPurchase_Auth %s"), *UpdateGetShopState()->GetName()));
 	if (UpdateGetShopState())
-		UpdateGetShopState()->TryPurchase(InstigatingPC, Cost, SpawnBPClass, Location);
+		UpdateGetShopState()->TryPurchaseWood_Auth(InstigatingPC, Location);
+}
+
+void UShopperComponent::TryPurchasePaint_Auth_Implementation(AMymPlayerController* InstigatingPC, EColorOption PaintColor, const FTransform& Location)
+{
+	if (UpdateGetShopState())
+		UpdateGetShopState()->TryPurchasePaint_Auth(InstigatingPC, PaintColor, Location);
 }
 

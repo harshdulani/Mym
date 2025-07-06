@@ -4,17 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "ColorPaletteDataAsset.h"
 #include "OrderDataAsset.generated.h"
-
-UENUM(BlueprintType)
-enum class EOrderColor : uint8
-{
-	EOC_Clear UMETA(DisplayName = "Clear"),
-	EOC_Yellow UMETA(DisplayName = "Yellow"),
-	EOC_White UMETA(DisplayName = "White"),
-	EOC_Blue UMETA(DisplayName = "Blue"),
-	EOC_Red UMETA(DisplayName = "Red"),
-};
 
 // BPType and BPable, in case designers want to add more options/ details about order item
 USTRUCT(BlueprintType)
@@ -24,13 +15,13 @@ struct MYM_API FOrderData
 
 public:	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FName ItemName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	UStaticMesh* TargetMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FName ItemName;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	EOrderColor Color;
+	EColorOption Color;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int Charge = 0;
@@ -39,14 +30,11 @@ public:
 	{
 		TargetMesh = nullptr;
 		ItemName = NAME_None;
-		Color = EOrderColor::EOC_Clear;
+		Color = EColorOption::ECO_White;
 		Charge = 0;
 	}
 };
 
-/**
- * 
- */
 UCLASS()
 class MYM_API UOrderDataAsset : public UPrimaryDataAsset
 {

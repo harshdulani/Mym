@@ -7,6 +7,7 @@
 #include "ShopperComponent.generated.h"
 
 
+enum class EColorOption : uint8;
 class AMymPlayerController;
 class AShopState;
 
@@ -28,7 +29,10 @@ public:
 	AShopState* UpdateGetShopState();
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
-	void TryPurchase_Auth(AMymPlayerController* InstigatingPC, int32 Cost, TSubclassOf<AActor> SpawnBPClass, const FTransform& Location);
+	void TryPurchaseWood_Auth(AMymPlayerController* InstigatingPC, const FTransform& Location);
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
+	void TryPurchasePaint_Auth(AMymPlayerController* InstigatingPC, EColorOption PaintColor, const FTransform& Location);
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Shop", meta = (AllowPrivateAccess = "true"))

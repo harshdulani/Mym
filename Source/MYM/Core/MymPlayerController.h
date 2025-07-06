@@ -24,7 +24,8 @@ public:
 	AMymHUD* GetMymHUD() const { return MymHUD;}
 	
 	/** Returns Player Controller as MymPlayerController **/
-	FORCEINLINE TWeakObjectPtr<AMymCharacter> GetMymCharacter() const { return MymCharacter; }
+	UFUNCTION(BlueprintPure)
+	AMymCharacter* GetMymCharacter() const { return MymCharacter.Get(); }
 
 private:
 	UPROPERTY(BlueprintReadWrite, Category = "HUD", meta = (AllowPrivateAccess = "true"))

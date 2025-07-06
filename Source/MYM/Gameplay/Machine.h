@@ -10,11 +10,6 @@ class UInteractionTrackerComponent;
 class UInteractionComponent;
 class UTextRenderComponent;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FButtonClickDelegate,
-											   UStaticMeshComponent*, Mesh,
-											   UInteractionComponent*, Interactable,
-											   UInteractionTrackerComponent*, Tracker);
-
 UCLASS()
 class MYM_API AMachine : public AActor
 {
@@ -25,19 +20,8 @@ public:
 	AMachine();
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 public:	
-	UFUNCTION(BlueprintImplementableEvent, Category="Buttons")
-	void OnInteract1Begin_Event(UInteractionTrackerComponent* ByTracker);
-	UFUNCTION(BlueprintImplementableEvent, Category="Buttons")
-	void OnInteract2Begin_Event(UInteractionTrackerComponent* ByTracker);
-	UFUNCTION(BlueprintImplementableEvent, Category="Buttons")
-	void OnInteract3Begin_Event(UInteractionTrackerComponent* ByTracker);
-	UFUNCTION(BlueprintImplementableEvent, Category="Buttons")
-	void OnInteractDoneBegin_Event(UInteractionTrackerComponent* ByTracker);
 
 private:
 	
