@@ -43,6 +43,10 @@ void UInteractionTrackerComponent::InteractBegin()
 	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("InteractBegin: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 	if (!CurrentInteractable) return;
 
+	// my owner is the character, its owner is the pawn
+	// we save a cast, but i would just cast if i wasn't adding a comment
+	auto MyOwnersOwner = GetOwner()->GetOwner();
+	CurrentInteractable->GetOwner()->SetOwner(MyOwnersOwner);
 	CurrentInteractable->BeginInteraction(this);
 	bInteractionHeld = true;
 }
@@ -51,12 +55,12 @@ void UInteractionTrackerComponent::InteractEnd()
 {	
 	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("InteractEnd: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 	bInteractionHeld = false;
-	// @todo: if current grabbable is bad code, we can do better
+	// @todo: current grabbable system has bad code, we can do better
 	if (CurrentInteractable)
 	{
 		CurrentInteractable->EndInteraction(this);
 	}
-	else if (CurrentGrabbable)
+	if (CurrentGrabbable)
 	{
 		CurrentGrabbable->EndInteraction(this);
 	}

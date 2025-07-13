@@ -12,7 +12,7 @@ AOrderSheet::AOrderSheet()
 	PrimaryActorTick.bCanEverTick = false;
 
 	RootScene = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
-	SetRootComponent(PaperMesh);
+	SetRootComponent(RootScene);
 	
 	PaperMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PaperMesh"));
 	PaperMesh->SetupAttachment(RootScene);

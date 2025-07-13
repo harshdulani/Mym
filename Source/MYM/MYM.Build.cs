@@ -15,7 +15,8 @@ public class MYM : ModuleRules
 			"Engine",
 			"InputCore", 
 			"EnhancedInput",
-			"GameplayTags"
+			"GameplayTags",
+			
 		});
 	}
 }

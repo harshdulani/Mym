@@ -8,6 +8,7 @@
 #include "Logging/LogMacros.h"
 #include "MymCharacter.generated.h"
 
+class UWidgetComponent;
 class UPhysicsHandleComponent;
 class UInteractionTrackerComponent;
 class AMymPlayerController;
@@ -55,6 +56,8 @@ public:
 	UPhysicsHandleComponent* GetGrabHandle() const { return GrabHandle; }
 	UFUNCTION(BlueprintPure)
 	FORCEINLINE UInteractionTrackerComponent* GetInteractionTracker() const { return InteractionTracker; }
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE UShopperComponent* GetShopper() const { return Shopper; }
 	
 	/** Returns Mesh1P subobject **/
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
@@ -94,6 +97,10 @@ private:
 	/** Interact Input Action */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* InteractAction;
+
+	/** Interact Input Action */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* WidgetSelectAction;
 
 	// Interactions
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Interaction, meta = (AllowPrivateAccess = "true"))

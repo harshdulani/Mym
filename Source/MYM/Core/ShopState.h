@@ -16,6 +16,8 @@ struct FCartItemData
 	
 public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
+	TSubclassOf<AResource> ResourceBP;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	FText ItemName;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	EColorOption Color = EColorOption::ECO_None;
@@ -53,13 +55,21 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Shop|Budget")
 	int32 GetShopBudget() const { return ShopBudget; }
-
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
+	void AddItemToCart_Auth(const FCartItemData& CartItemData);
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
+	void RemoveItemFromCart_Auth(const FCartItemData& CartItemData, bool bRemoveCompletely);	
+	
 	/** Attempts to make a purchase (server side only) */
 	UFUNCTION(Server, Reliable, Category = "Shop|Budget")
 	void TryPurchaseWood_Auth(AMymPlayerController* InstigatingPC, const FTransform& Location);
-	
 	UFUNCTION(Server, Reliable, Category = "Shop|Budget")
 	void TryPurchasePaint_Auth(AMymPlayerController* InstigatingPC, EColorOption Color, const FTransform& Location);
+
+	UFUNCTION(Server, Reliable, Category = "Shop|Budget")
+	void BuyCart(AMymPlayerController* InstigatingPC, const FTransform& SpawnPoint);
 	
 	UFUNCTION(NetMulticast, Reliable, Category = "Shop|Orders")
 	void OnOrderCreated_Client(const FOrderData& Order);
@@ -73,7 +83,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Order")
 	int GetOrderCharge(const FOrderData& OrderInstance, const FOrderData& OrderSpec) const;
-	
+
 protected:
 	UFUNCTION()
 	void OnRep_ShopBudget();
@@ -88,6 +98,9 @@ protected:
 	UFUNCTION()
 	void OnRep_CurrentCart();
 	void HandleCartUpdated() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Shop")
+	void ClearCart();
 	
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "Shop|Orders")
@@ -102,11 +115,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Shop")
 	UColorPaletteDataAsset* ColorPalette = nullptr;
 	
-	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
-	void AddItemToCart_Auth(FCartItemData CartItemData);
-	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
-	void RemoveItemFromCart_Auth(FCartItemData CartItemData);	
-	
 protected:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ShopBudget)
 	int32 ShopBudget = 0;
@@ -117,7 +125,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TArray<TSubclassOf<AResource>> ResourceList;
 	
-	UPROPERTY(Replicated, VisibleAnywhere, ReplicatedUsing=OnRep_CurrentCart)
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_CurrentCart)
 	TArray<FCartItemData> CurrentCart;
 
 	UPROPERTY(BlueprintAssignable, Category = "Shop")

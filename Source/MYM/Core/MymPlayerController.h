@@ -17,6 +17,7 @@ class MYM_API AMymPlayerController : public APlayerController
 	GENERATED_BODY()
 	
 protected:
+	virtual void OnPossess(APawn* InPawn) override;
 	virtual void AcknowledgePossession(class APawn* P) override;
 
 public:
@@ -27,6 +28,9 @@ public:
 	UFUNCTION(BlueprintPure)
 	AMymCharacter* GetMymCharacter() const { return MymCharacter.Get(); }
 
+private:
+	void InitializeRefs(AMymCharacter* NewMymCharacter);
+	
 private:
 	UPROPERTY(BlueprintReadWrite, Category = "HUD", meta = (AllowPrivateAccess = "true"))
 	AMymHUD* MymHUD;

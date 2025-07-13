@@ -3,9 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ShopState.h"
 #include "Components/ActorComponent.h"
 #include "ShopperComponent.generated.h"
-
 
 enum class EColorOption : uint8;
 class AMymPlayerController;
@@ -28,6 +28,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Shop")
 	AShopState* UpdateGetShopState();
 
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
+	void AddItemToCart(FCartItemData ItemData);
+	
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
+	void RemoveItemFromCart(FCartItemData ItemData, bool bRemoveCompletely);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
+	void BuyCart(AMymPlayerController* InstigatingPC, const FTransform& SpawnPoint);
+	
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
 	void TryPurchaseWood_Auth(AMymPlayerController* InstigatingPC, const FTransform& Location);
 	
