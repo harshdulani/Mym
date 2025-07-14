@@ -15,6 +15,7 @@ enum class EColorOption : uint8
 	ECO_Green UMETA(DisplayName = "Green"),
 	ECO_Blue UMETA(DisplayName = "Blue"),
 	ECO_Yellow UMETA(DisplayName = "Yellow"),
+	ECO_MAX UMETA(DisplayName = "MAX"),
 };
 
 UCLASS()

@@ -2,9 +2,10 @@
 #include "InteractionTrackerComponent.h"
 #include "GrabInteractionComponent.h"
 #include "InteractionComponent.h"
+#include "Camera/CameraComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "MYM/Core/MymCharacter.h"
 #include "MYM/Core/MymHUD.h"
-#include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
 UInteractionTrackerComponent::UInteractionTrackerComponent()
@@ -18,40 +19,36 @@ UInteractionTrackerComponent::UInteractionTrackerComponent()
 	UActorComponent::SetActive(false);
 }
 
-void UInteractionTrackerComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(UInteractionTrackerComponent, CurrentGrabbable);
-	DOREPLIFETIME(UInteractionTrackerComponent, bInteractionHeld);
-	DOREPLIFETIME(UInteractionTrackerComponent, CurrentInteractable);
-}
-
 // Called every frame
 void UInteractionTrackerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// let the interaction subclasses define what their tick is. had i been making an OnInteractionHeld event, I wouldve used it. but right now adding a delegate broadcast on tick() seems unnecessary
-	if (bInteractionHeld) return;
-	
+	if (bInteractionHeld)
+	{
+		// if interaction is held && if i also have a set grabbable
+		if (CurrentGrabbable)
+		{
+			SendCameraForward_Auth(MymCharacter->GetCameraForward());
+		}
+		return;
+	}
+	if (!bInteractionTrace) return;
 	if (InteractablesInRange.Num() > 0)
 		TraceForInteractables();
 }
 
-void UInteractionTrackerComponent::InteractBegin()
+void UInteractionTrackerComponent::Auth_InteractBegin_Implementation()
 {
-	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("InteractBegin: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
+	//UKismetSystemLibrary::PrintString(GetWorld(), FString::Printf(TEXT("InteractBegin: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 	if (!CurrentInteractable) return;
-
-	// my owner is the character, its owner is the pawn
-	// we save a cast, but i would just cast if i wasn't adding a comment
-	auto MyOwnersOwner = GetOwner()->GetOwner();
-	CurrentInteractable->GetOwner()->SetOwner(MyOwnersOwner);
+	
 	CurrentInteractable->BeginInteraction(this);
 	bInteractionHeld = true;
 }
 
-void UInteractionTrackerComponent::InteractEnd()
+void UInteractionTrackerComponent::Auth_InteractEnd_Implementation()
 {	
 	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("InteractEnd: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 	bInteractionHeld = false;
@@ -66,11 +63,26 @@ void UInteractionTrackerComponent::InteractEnd()
 	}
 }
 
+void UInteractionTrackerComponent::InteractBegin()
+{
+	if (!CurrentInteractable) return;
+	
+	Auth_InteractBegin();
+	bInteractionHeld = true;
+}
+
+void UInteractionTrackerComponent::InteractEnd()
+{
+	Auth_InteractEnd();
+	bInteractionHeld = false;
+}
+
 void UInteractionTrackerComponent::PauseInteractionTesting()
 {
 	if (MymHUD)
 		MymHUD->HideCrosshair();
-	SetComponentTickEnabled(false);
+	bInteractionTrace = false;
+	//SetComponentTickEnabled(false);
 }
 
 void UInteractionTrackerComponent::ResumeInteractionTesting()
@@ -79,8 +91,8 @@ void UInteractionTrackerComponent::ResumeInteractionTesting()
 	{
 		MymHUD->ShowInteractionWidget(CurrentInteractable->GetInteractionString());
 	}
-	
-	SetComponentTickEnabled(true);
+	bInteractionTrace = true;
+	//SetComponentTickEnabled(true);
 }
 
 void UInteractionTrackerComponent::InteractableDisabled(UInteractionComponent* Interactable)
@@ -93,7 +105,7 @@ void UInteractionTrackerComponent::InteractableDisabled(UInteractionComponent* I
 	if (InteractablesInRange[idx] == CurrentInteractable)
 	{
 		//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("DisabledInform: UnsetCurrentInteractable from %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
-		UnsetCurrentInteractable();
+		SetCurrentInteractable(nullptr);
 	}
 			
 	InteractablesInRange.RemoveAtSwap(idx);
@@ -101,9 +113,30 @@ void UInteractionTrackerComponent::InteractableDisabled(UInteractionComponent* I
 
 void UInteractionTrackerComponent::SetGrabbable(UGrabInteractionComponent* Grabbable)
 {
-	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Set Grabbable: %s"), (Grabbable ? *Grabbable->GetName() : TEXT("None"))));
 	CurrentGrabbable = Grabbable;
-	UnsetCurrentInteractable();
+	SetGrabbable_Auth(Grabbable);
+}
+
+void UInteractionTrackerComponent::SetGrabbable_Client_Implementation(UGrabInteractionComponent* Grabbable)
+{
+	CurrentGrabbable = Grabbable;
+	SetCurrentInteractable(CurrentGrabbable);
+}
+
+void UInteractionTrackerComponent::SetGrabbable_Auth_Implementation(UGrabInteractionComponent* Grabbable)
+{
+	CurrentGrabbable = Grabbable;
+	SetCurrentInteractable(CurrentGrabbable);
+}
+
+void UInteractionTrackerComponent::SendCameraForward_Auth_Implementation(FVector NewForward)
+{
+	if (!CurrentGrabbable)
+	{
+		UE_LOG(LogInteraction, Warning, TEXT("SendCameraForward: No grabbable set!"));
+		return;
+	}
+	CurrentGrabbable->CurrentPlayerCameraForward = NewForward;
 }
 
 void UInteractionTrackerComponent::TraceForInteractables()
@@ -144,7 +177,9 @@ void UInteractionTrackerComponent::TraceForInteractables()
 					{
 						MymHUD->ShowInteractionWidget(InteractionComp->GetInteractionString());
 					}
+					//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("TraceHit: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))),	true, true, FLinearColor::Red, 0.f);
 					CurrentInteractable = InteractionComp;
+					SetCurrentInteractable(InteractionComp);
 					return;
 				}
 			}
@@ -159,18 +194,17 @@ void UInteractionTrackerComponent::TraceForInteractables()
 							MymHUD->ShowInteractionWidget(Interactable->GetInteractionString());
 						}
 						CurrentInteractable = Interactable;
+						SetCurrentInteractable(Interactable);
+						//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("TraceHit: CurrentInteractable %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))),true, true, FLinearColor::Red, 0.f);
 						return;
 					}
 				}
 			}
 		}
 	}
-	FString InteractionString = TEXT("None");
-	if (CurrentInteractable)
-		InteractionString = CurrentInteractable->GetName();
 	
-	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("No tracehit: UnsetCurrentInteractable from %s %i"), *InteractionString, bInteractionHeld));
-	UnsetCurrentInteractable();
+	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("No tracehit: UnsetCurrentInteractable from %s %i"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None")), bInteractionHeld), true, true, FLinearColor::Red, 0.f);
+	SetCurrentInteractable(nullptr);
 }
 
 void UInteractionTrackerComponent::CheckForDisabledInteractables()
@@ -183,14 +217,14 @@ void UInteractionTrackerComponent::CheckForDisabledInteractables()
 		{
 			if (InteractablesInRange[i] == CurrentInteractable)
 			{
-				UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("DisabledCheck: UnsetCurrentInteractable from %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
+				//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("DisabledCheck: UnsetCurrentInteractable from %s"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None"))));
 				if (CurrentGrabbable == CurrentInteractable)
 				{
 					SetGrabbable(nullptr);
 				}
 				else
 				{
-					UnsetCurrentInteractable();
+					SetCurrentInteractable(nullptr);
 				}
 			}
 			
@@ -199,11 +233,18 @@ void UInteractionTrackerComponent::CheckForDisabledInteractables()
 	}
 }
 
-void UInteractionTrackerComponent::UnsetCurrentInteractable()
-{	
-	CurrentInteractable = nullptr;
-	if (MymHUD)
+void UInteractionTrackerComponent::SetCurrentInteractable(UInteractionComponent* NewInteractable)
+{
+	CurrentInteractable = NewInteractable;
+	SetCurrentInteractable_Auth(NewInteractable);
+
+	if (MymHUD && !CurrentInteractable)
 		MymHUD->HideInteractionWidget();
+}
+
+void UInteractionTrackerComponent::SetCurrentInteractable_Auth_Implementation(UInteractionComponent* NewInteractable)
+{
+	CurrentInteractable = NewInteractable;
 }
 
 void UInteractionTrackerComponent::InteractableEnterRange_Implementation(UInteractionComponent* Interactable)
@@ -225,7 +266,7 @@ void UInteractionTrackerComponent::InteractableEnterRange_Implementation(UIntera
 	if (bFound) return;
 	
 	InteractablesInRange.Add(Interactable);
-
+	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("enter range: %s,  Interactables in range: %i"), (Interactable ? *Interactable->GetName() : TEXT("None")), InteractablesInRange.Num())); 
 	if (InteractablesInRange.Num() >= 1)
 	{
 		if (MymHUD)
@@ -252,6 +293,7 @@ void UInteractionTrackerComponent::InteractableExitRange_Implementation(UInterac
 	if (idx < 0) return;
 	
 	InteractablesInRange.RemoveAtSwap(idx);
+	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("exit range: %s,  Interactables in range: %i"), (Interactable ? *Interactable->GetName() : TEXT("None")), InteractablesInRange.Num()));
 
 	if (InteractablesInRange.IsEmpty())
 	{
@@ -261,11 +303,7 @@ void UInteractionTrackerComponent::InteractableExitRange_Implementation(UInterac
 	if ((InteractablesInRange.IsEmpty() || CurrentInteractable == Interactable)
 		&& (CurrentGrabbable != Interactable)) // grabbables will be a certain distance off which might be out of their overlap range
 	{
-		FString GrabStr = TEXT("None");
-		if (CurrentGrabbable)
-			GrabStr = CurrentGrabbable->GetName();
-		// UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("exit range: UnsetCurrentInteractable from %s, grab %s eq %i"),
-			//(CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None")), *GrabStr, CurrentGrabbable == CurrentInteractable)); 
-		UnsetCurrentInteractable();
+		//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("exit range: UnsetCurrentInteractable from %s, grab %s eq %i"), (CurrentInteractable ? *CurrentInteractable->GetName() : TEXT("None")), (CurrentGrabbable ? *CurrentGrabbable->GetName() : TEXT("None")), CurrentGrabbable == CurrentInteractable)); 
+		SetCurrentInteractable(nullptr);
 	}
 }

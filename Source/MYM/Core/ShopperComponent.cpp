@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "ShopperComponent.h"
 
+#include "MymGameMode.h"
 #include "MymPlayerController.h"
 #include "ShopState.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -21,6 +22,12 @@ void UShopperComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
+}
+
+void UShopperComponent::AddToActiveOrders_Implementation(FOrderData OrderData)
+{
+	auto GM = Cast<AMymGameMode>(GetWorld()->GetAuthGameMode());
+	GM->AddToActiveOrders(OrderData);
 }
 
 AShopState* UShopperComponent::UpdateGetShopState()

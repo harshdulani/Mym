@@ -18,8 +18,7 @@ class MYM_API UInteractionComponent : public USphereComponent
 
 public:	
 	UInteractionComponent();
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-
+	
 	bool OwnsPrimitive(UPrimitiveComponent* Primitive) const;
 	
 protected:
@@ -68,14 +67,11 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Interaction")
 	FString GetInteractionString() const;
-
-private:
-	
 	
 public:	
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "Interaction|State")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Interaction|State")
 	FGameplayTag CurrentState;
-	UPROPERTY(Replicated)
+	UPROPERTY(Transient)
 	bool bManageRange = true;
 	
 	// All the primitive components (static meshes, etc) that must be traced, when this interactable wants to be hit.

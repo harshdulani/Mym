@@ -40,7 +40,6 @@ class AMymPlayerController;
 
 // Expose events to blueprint/UI
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBudgetChanged, int32, NewBudget);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOrderDelegate, FOrderData, OrderData);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FCartDelegate, const TArray<FCartItemData>&, Cart);
 
 UCLASS()
@@ -72,18 +71,8 @@ public:
 	void BuyCart(AMymPlayerController* InstigatingPC, const FTransform& SpawnPoint);
 	
 	UFUNCTION(NetMulticast, Reliable, Category = "Shop|Orders")
-	void OnOrderCreated_Client(const FOrderData& Order);
-
-	// you shuoldnt be able to call it from a client but still adding a call for any preprocessing one might need
-	UFUNCTION(BlueprintCallable, Category = "Shop|Orders")
-	void GenerateOrder();
+	void OnOrderCreated_Multicast(const FOrderData& Order);
 	
-	UFUNCTION(Server, Reliable, Category = "Shop|Orders")
-	void GenerateOrder_Auth();
-
-	UFUNCTION(BlueprintCallable, Category = "Order")
-	int GetOrderCharge(const FOrderData& OrderInstance, const FOrderData& OrderSpec) const;
-
 protected:
 	UFUNCTION()
 	void OnRep_ShopBudget();
@@ -103,14 +92,8 @@ protected:
 	void ClearCart();
 	
 public:
-	UPROPERTY(EditDefaultsOnly, Category = "Shop|Orders")
-	TArray<UOrderDataAsset*> OrderList;
-	
 	UPROPERTY(BlueprintAssignable, Category = "Shop")
 	FOnBudgetChanged OnBudgetUpdated;
-	
-	// order generation
-	FOrderDelegate OnOrderCreated;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Shop")
 	UColorPaletteDataAsset* ColorPalette = nullptr;
@@ -118,9 +101,6 @@ public:
 protected:
 	UPROPERTY(BlueprintReadWrite, ReplicatedUsing = OnRep_ShopBudget)
 	int32 ShopBudget = 0;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TSubclassOf<AActor> SpawnOrderBP;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TArray<TSubclassOf<AResource>> ResourceList;

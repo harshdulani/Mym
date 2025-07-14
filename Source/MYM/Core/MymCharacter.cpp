@@ -7,15 +7,9 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "MymHUD.h"
-#include "MymPlayerController.h"
 #include "ShopperComponent.h"
-#include "Components/WidgetComponent.h"
 #include "Engine/LocalPlayer.h"
-#include "Kismet/KismetSystemLibrary.h"
-#include "MYM/Interaction/GrabInteractionComponent.h"
 #include "MYM/Interaction/InteractionTrackerComponent.h"
-#include "Net/UnrealNetwork.h"
 #include "PhysicsEngine/PhysicsHandleComponent.h"
 
 class UWidgetComponent;
@@ -98,18 +92,9 @@ void AMymCharacter::BeginPlay()
 	InteractionTracker->SetCharacterReference(this);
 }
 
-void AMymCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AMymCharacter, CameraForward);
-}
-
 FVector AMymCharacter::GetCameraForward() const
 {
-	if (HasAuthority())
-		return GetFirstPersonCameraComponent()->GetForwardVector();
-
-	return CameraForward;
+	return GetFirstPersonCameraComponent()->GetForwardVector();
 }
 
 void AMymCharacter::Move(const FInputActionValue& Value)
@@ -136,7 +121,6 @@ void AMymCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
-	CameraForward = GetFirstPersonCameraComponent()->GetForwardVector();
 }
 
 void AMymCharacter::InteractBegin(const FInputActionValue& Value)

@@ -1,9 +1,6 @@
 #include "InteractionComponent.h"
 #include "InteractionTrackerComponent.h"
-#include "Kismet/KismetSystemLibrary.h"
 #include "MYM/Core/MymCharacter.h"
-#include "MYM/Core/MymPlayerController.h"
-#include "Net/UnrealNetwork.h"
 
 // Sets default values for this component's properties
 UInteractionComponent::UInteractionComponent()
@@ -15,13 +12,6 @@ UInteractionComponent::UInteractionComponent()
 	SphereRadius = 256.f;
 }
 
-void UInteractionComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(UInteractionComponent, CurrentState);
-	DOREPLIFETIME(UInteractionComponent, bManageRange);
-}
-
 bool UInteractionComponent::OwnsPrimitive(UPrimitiveComponent* Primitive) const
 {
 	return OwnedPrimitives.Contains(Primitive);
@@ -31,7 +21,7 @@ bool UInteractionComponent::OwnsPrimitive(UPrimitiveComponent* Primitive) const
 void UInteractionComponent::BeginPlay()
 {
 	Super::BeginPlay();
-		
+	
 	bManageRange = true;
 	OnComponentBeginOverlap.AddDynamic(this, &UInteractionComponent::EnterRange);
 	OnComponentEndOverlap.AddDynamic(this, &UInteractionComponent::ExitRange);
@@ -62,7 +52,7 @@ void UInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void UInteractionComponent::BeginInteraction(UInteractionTrackerComponent* Tracker)
 {
 	if (IsDisabled() || IsBlocked()) return;
-	
+
 	if (OnInteractBegin.IsBound())
 		OnInteractBegin.Broadcast(Tracker);
 }

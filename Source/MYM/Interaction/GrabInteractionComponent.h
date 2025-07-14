@@ -16,7 +16,6 @@ class MYM_API UGrabInteractionComponent : public UInteractionComponent
 
 public:
 	UGrabInteractionComponent();
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -30,14 +29,20 @@ public:
 	void StopGrabbing(UInteractionTrackerComponent* ByTracker);
 
 	UFUNCTION(BlueprintPure, Category="Grab")
-	void GetGrabLocationAndRotation(FVector& OutLocation, FRotator& OutRotation) const;
+	void GetGrabLocationAndRotation(FVector& OutLocation) const;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Grab")
 	float GrabDistance = 250.f;
-	
+
+	UPROPERTY(Transient)
+	FVector CurrentPlayerCameraForward;
+
 	UFUNCTION(BlueprintPure, Category="Grab")
-	UInteractionTrackerComponent* GetGrabber() const { return Grabber.Get(); }
+	UInteractionTrackerComponent* GetGrabber() const { return Grabber; }
 
 private:
-	TWeakObjectPtr<UInteractionTrackerComponent> Grabber;
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Grab", meta=(AllowPrivateAccess = true))
+	UInteractionTrackerComponent* Grabber = nullptr;
+
+	bool bBlockTick = true;
 };

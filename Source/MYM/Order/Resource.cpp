@@ -7,15 +7,13 @@ AResource::AResource()
 	bReplicates = true;
 	AActor::SetReplicateMovement(true);
 	
-	RootScene = CreateDefaultSubobject<USceneComponent>(TEXT("RootScene"));
-	SetRootComponent(RootScene);
-
 	MainMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MainMesh"));
-	MainMesh->SetupAttachment(RootScene);
+	SetRootComponent(MainMesh);
 
 	GrabComponent = CreateDefaultSubobject<UGrabInteractionComponent>(TEXT("Grab Interaction Component"));
-	GrabComponent->SetupAttachment(RootScene);
-
+	GrabComponent->SetupAttachment(MainMesh);
+	GrabComponent->OwnedPrimitives.Add(MainMesh);
+	
 	MainMesh->SetAngularDamping(0.3f);
 	MainMesh->SetIsReplicated(true);
 }

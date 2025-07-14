@@ -19,11 +19,15 @@ class MYM_API UInteractionTrackerComponent : public UActorComponent
 public:	
 	// Sets default values for this component's properties
 	UInteractionTrackerComponent();
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 protected:
 	
 public:	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	UFUNCTION(Server, Reliable, Category = "Interaction")
+	void Auth_InteractBegin();
+	UFUNCTION(Server, Reliable, Category = "Interaction")
+	void Auth_InteractEnd();
 
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void InteractBegin();
@@ -45,22 +49,37 @@ public:
 	void SetCharacterReference(AMymCharacter* Character) { MymCharacter = Character; }
 	AMymCharacter* GetCharacter() const { return MymCharacter; }
 	void InteractableDisabled(UInteractionComponent* Interactable);
-	UFUNCTION(BlueprintCallable, Category = "Interaction|Grab")
+
+	// set locally from client to itself
 	void SetGrabbable(UGrabInteractionComponent* Grabbable);
+	// set from client to server
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Interaction|Grab")
+	void SetGrabbable_Auth(UGrabInteractionComponent* Grabbable);
+	// set to server from client
+	UFUNCTION(Client, Reliable, BlueprintCallable, Category = "Interaction|Grab")
+	void SetGrabbable_Client(UGrabInteractionComponent* Grabbable);
+
+	// Unreliable because we dont care if we miss a couple of Rotation updates
+	UFUNCTION(Server, Unreliable, BlueprintCallable, Category = "Interaction|Grab")
+	void SendCameraForward_Auth(FVector NewForward);
+	
 	UFUNCTION(BlueprintPure, Category = "Interaction|Grab")
 	UGrabInteractionComponent* GetGrabbable() const { return CurrentGrabbable.Get(); }
 
+	
 protected:
 	void TraceForInteractables();
 	void CheckForDisabledInteractables();
 
-	void UnsetCurrentInteractable();
+	void SetCurrentInteractable(UInteractionComponent* NewInteractable);
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Interaction|Refs")
+	void SetCurrentInteractable_Auth(UInteractionComponent* NewInteractable);
 	
 private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction|Refs", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category = "Interaction|Refs", meta = (AllowPrivateAccess = "true"))
 	TArray<UInteractionComponent*> InteractablesInRange;
 
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category = Interaction, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, Transient, BlueprintReadOnly, Category = "Interaction|Refs", meta = (AllowPrivateAccess = "true"))
 	UInteractionComponent* CurrentInteractable = nullptr;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction|Refs", meta = (AllowPrivateAccess = "true"))
@@ -72,9 +91,9 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Interaction, meta = (AllowPrivateAccess = "true"))
 	float InteractionTraceRange = 256.f;
 
-	UPROPERTY(Replicated)
+	UPROPERTY()
 	TObjectPtr<UGrabInteractionComponent> CurrentGrabbable;
-
-	UPROPERTY(Replicated)
+	
 	bool bInteractionHeld = false;
+	bool bInteractionTrace = true;
 };

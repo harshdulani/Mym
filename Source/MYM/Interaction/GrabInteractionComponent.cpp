@@ -11,17 +11,13 @@ UGrabInteractionComponent::UGrabInteractionComponent()
 	InteractionString = "Grab";
 
 	PrimaryComponentTick.bCanEverTick = true;
-}
-
-void UGrabInteractionComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	UActorComponent::SetComponentTickEnabled(true);
 }
 
 void UGrabInteractionComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	OnInteractBegin.AddDynamic(this, &UGrabInteractionComponent::StartGrabbing);
 	OnInteractEnd.AddDynamic(this, &UGrabInteractionComponent::StopGrabbing);
 }
@@ -37,6 +33,8 @@ void UGrabInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 void UGrabInteractionComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (bBlockTick) return;
 	
 	if (GetOwner()->HasAuthority())
 		TickGrabbing();
@@ -44,67 +42,62 @@ void UGrabInteractionComponent::TickComponent(float DeltaTime, enum ELevelTick T
 
 void UGrabInteractionComponent::StartGrabbing_Implementation(UInteractionTrackerComponent* ByTracker)
 {
-	if (Grabber.IsValid())
+	if (Grabber)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GrabbingActor already set!"));
+		UE_LOG(LogInteraction, Warning, TEXT("GrabbingActor already set!"));
 		return;
 	}
 	Grabber = ByTracker;
+	Grabber->SetGrabbable_Client(this);
 	Grabber->SetGrabbable(this);
-	GetOwner()->SetOwner(ByTracker->GetCharacter());
-	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Grabbing started %s %s"), *ByTracker->GetName(), *Grabber->GetName()));
 	UPrimitiveComponent* GrabComponent = Cast<UPrimitiveComponent>(GetAttachmentRoot());
 	if (!GrabComponent)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Grab Unsuccessful: Root component doesn't derive from PrimitiveComponent"));
+		UE_LOG(LogInteraction, Error, TEXT("Grab Unsuccessful: Root component doesn't derive from PrimitiveComponent"));
 		return;
 	}
 	Grabber->GetCharacter()->GetGrabHandle()->GrabComponentAtLocation(GrabComponent, FName("None"), GrabComponent->GetComponentLocation());
-	SetComponentTickEnabled(true);
+	bBlockTick = false;
 
 	Grabber->PauseInteractionTesting();
 }
 
 void UGrabInteractionComponent::TickGrabbing_Implementation()
 {
-	if (!Grabber.IsValid())
+	if (!Grabber)
 	{
 		return;
 	}
 
 	FVector Location;
-	FRotator Rotation;
-	GetGrabLocationAndRotation(Location, Rotation);
-	Grabber->GetCharacter()->GetGrabHandle()->SetTargetLocationAndRotation(Location, Rotation);
+	GetGrabLocationAndRotation(Location);
+	Grabber->GetCharacter()->GetGrabHandle()->SetTargetLocation(Location);
 }
 
 void UGrabInteractionComponent::StopGrabbing_Implementation(UInteractionTrackerComponent* ByTracker)
 {
-	UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Grabbing stopped %s %s"),
-															*ByTracker->GetName(), (Grabber.IsValid() ? *Grabber->GetName() : TEXT("None"))));
-	if (Grabber.IsValid() && ByTracker != Grabber.Get())
+	//UKismetSystemLibrary::PrintString(this, FString::Printf(TEXT("Grabbing stopped %s %s"), *ByTracker->GetName(), (Grabber ? *Grabber->GetName() : TEXT("None"))));
+	if (Grabber && ByTracker != Grabber)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GrabbingActor not set/ doesn't match tracker!"));
+		UE_LOG(LogInteraction, Warning, TEXT("GrabbingActor not set/ doesn't match tracker!"));
 		return;
 	}
 	ByTracker->GetCharacter()->GetGrabHandle()->ReleaseComponent();
 	ByTracker->SetGrabbable(nullptr);
+	ByTracker->SetGrabbable_Client(nullptr);
 	
 	ByTracker->ResumeInteractionTesting();
 	
-	SetComponentTickEnabled(false);
-	Grabber.Reset();
+	bBlockTick = true;
+	Grabber = nullptr;
 }
 
-void UGrabInteractionComponent::GetGrabLocationAndRotation(FVector& OutLocation, FRotator& OutRotation) const
+void UGrabInteractionComponent::GetGrabLocationAndRotation(FVector& OutLocation) const
 {
-	if (!Grabber.IsValid())
+	if (!Grabber || !Grabber->GetCharacter())
 	{
-		UE_LOG(LogTemp, Error, TEXT("GrabbingActor not set!"));
+		UE_LOG(LogInteraction, Error, TEXT("Grabber/ Grabbing Actor not set!"));
 		return;
 	}
-	AMymCharacter* MymCharacter = Grabber->GetCharacter();
-	
-	OutRotation = MymCharacter->GetActorRotation();
-	OutLocation = MymCharacter->GetActorLocation() + (MymCharacter->GetCameraForward() * GrabDistance);
+	OutLocation = Grabber->GetCharacter()->GetActorLocation() + (CurrentPlayerCameraForward * GrabDistance);
 }

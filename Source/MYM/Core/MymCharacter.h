@@ -45,7 +45,6 @@ protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
 	virtual void BeginPlay() override;
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	// End of APawn interface
 
 public:
@@ -111,7 +110,4 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shop", meta = (AllowPrivateAccess = "true"))
 	UShopperComponent* Shopper = nullptr;
-	
-	UPROPERTY(Replicated)
-	FVector CameraForward;
 };

@@ -25,6 +25,9 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Shop")
+	void AddToActiveOrders(FOrderData OrderData);	
+	
 	UFUNCTION(BlueprintCallable, Category = "Shop")
 	AShopState* UpdateGetShopState();
 
